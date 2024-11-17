@@ -34,10 +34,40 @@ void printKey(vector<uint8_t>& key){
 	cout << dec << endl;
 }
 
+// преобразование t(a)
+uint32_t transform(const vector<uint8_t>& parts){
+	uint32_t result = 0;
+	for(int i = 7; i >= 0; i--){
+	//	cout << i << " " << hex <<static_cast<int>(parts[i]); 
+		uint8_t transformed_nibble = transformation_table[i][parts[i]];
+	//	cout << "t(a_" << 7 - i << ") = 0x" << hex << static_cast<int>(transformed_nibble) << endl;
+		result |= (transformed_nibble << (4 * i));
+	}
+	return result;
+}
+
+vector<uint8_t> parse(uint32_t a){
+	vector<uint8_t> parts(8);
+	for(int i = 0; i < 8; i++){
+		parts[i] = (a >> (4*i)) & 0xF;
+	}
+	return parts;
+}
+
 int main(){
 	vector<uint8_t> mainKey = generateKey();
 	cout << "Generated key: ";
 	printKey(mainKey);
+
+	uint32_t test_a = 0xfdb97531;
+	int i = 0;
+	while(i < 4){
+		cout << "t(" << hex << test_a << ") = ";
+		vector<uint8_t> parts = parse(test_a);
+		test_a = transform(parts);
+		cout << hex << test_a << endl;
+		i++;
+	}
 
 	return 0;
 }
