@@ -34,6 +34,27 @@ void printKey(vector<uint8_t>& key){
 	cout << dec << endl;
 }
 
+// алгоритм развертывания ключа
+vector<uint32_t> expandKey(vector<uint8_t>& mainKey){
+	vector<uint32_t> keys(32);
+
+	for(int i = 0; i < 8; i++){
+		keys[i] = (mainKey[4 * i + 0] << 24) |
+			(mainKey[4 * i + 1] << 16) |
+			(mainKey[4 * i + 2] << 8) |
+			(mainKey[4 * i + 3]);
+	}
+	for(int i = 8; i < 24; i++){
+		keys[i] = keys[i % 8];
+	}
+
+	for(int i = 24; i < 32; i++){
+		keys[i] = keys[7 - (i % 8)];
+	}
+	return keys;
+}
+
+// парсер строки в вектор
 vector<uint8_t> parse(uint32_t a){
 	vector<uint8_t> parts(8);
 	for(int i = 0; i < 8; i++){
@@ -55,6 +76,7 @@ uint32_t transform(uint32_t a){
 	return result;
 }
 
+// преобразование g[k](a)
 uint32_t g(uint32_t k, uint32_t a){
 	uint32_t temp = transform((a + k) & 0xFFFFFFFF);	
 	uint32_t shifted = (temp << 11) | (temp >> (32 - 11));
@@ -62,9 +84,19 @@ uint32_t g(uint32_t k, uint32_t a){
 }
 
 int main(){
-	vector<uint8_t> mainKey = generateKey();
+	vector<uint8_t> mainKey = {
+		0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
+		0x77, 0x66, 0x55, 0x44, 0x33, 0x22, 0x11, 0x00,
+		0xf0, 0xf1, 0xf2, 0xf3, 0xf4, 0xf5, 0xf6, 0xf7,
+		0xf8, 0xf9, 0xfa, 0xfb, 0xfc, 0xfd, 0xfe, 0xff
+	}; //generateKey();
 	cout << "Generated key: ";
 	printKey(mainKey);
+
+	vector<uint32_t> keys = expandKey(mainKey);
+	for(int i = 0; i < 32; i++){
+		cout << "K_" << dec << i + 1  << " = " << hex << keys[i] << endl;
+	}
 
 	uint32_t test_a = 0xfdb97531;
 	int i = 0;
@@ -89,5 +121,6 @@ int main(){
 		i++;
 			
 	}
+
 	return 0;
 }
