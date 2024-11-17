@@ -13,7 +13,7 @@ int transformation_table[8][16] = {
 	{5, 13, 15, 6, 9, 2, 12, 10, 11, 7, 8, 1, 4, 3, 14, 0},
 	{8, 14, 2, 5, 6, 9, 1, 12, 15, 4, 11, 0, 13, 10, 3, 7},
 	{1, 7, 14, 13, 0, 5, 8, 3, 4, 15, 10, 6, 9, 12, 11, 2} 
-};
+};     //0  1   2   3  4  5  6  7  8  9  10  11  12  13 14 15
 
 vector<uint8_t> generateKey(){
 	vector<uint8_t> key(32);
@@ -34,8 +34,17 @@ void printKey(vector<uint8_t>& key){
 	cout << dec << endl;
 }
 
+vector<uint8_t> parse(uint32_t a){
+	vector<uint8_t> parts(8);
+	for(int i = 0; i < 8; i++){
+		parts[i] = (a >> (4*i)) & 0xF;
+	}
+	return parts;
+}
+
 // преобразование t(a)
-uint32_t transform(const vector<uint8_t>& parts){
+uint32_t transform(uint32_t a){
+	vector<uint8_t> parts = parse(a);
 	uint32_t result = 0;
 	for(int i = 7; i >= 0; i--){
 	//	cout << i << " " << hex <<static_cast<int>(parts[i]); 
@@ -46,12 +55,10 @@ uint32_t transform(const vector<uint8_t>& parts){
 	return result;
 }
 
-vector<uint8_t> parse(uint32_t a){
-	vector<uint8_t> parts(8);
-	for(int i = 0; i < 8; i++){
-		parts[i] = (a >> (4*i)) & 0xF;
-	}
-	return parts;
+uint32_t g(uint32_t k, uint32_t a){
+	uint32_t temp = transform((a + k) & 0xFFFFFFFF);	
+	uint32_t shifted = (temp << 11) | (temp >> (32 - 11));
+	return(shifted);
 }
 
 int main(){
@@ -63,11 +70,24 @@ int main(){
 	int i = 0;
 	while(i < 4){
 		cout << "t(" << hex << test_a << ") = ";
-		vector<uint8_t> parts = parse(test_a);
-		test_a = transform(parts);
+		test_a = transform(test_a);
 		cout << hex << test_a << endl;
 		i++;
 	}
+	i = 0;
+	cout << endl;
 
+	uint32_t test_k = 0x87654321;
+	test_a = 0xfedcba98;
+	uint32_t temp;
+	while(i < 4){
+		temp = test_k;
+		cout << "g[" << hex << test_k << "](" << test_a << ") = ";
+		test_k = g(test_k, test_a);
+		cout << hex << test_k << endl;
+		test_a = temp;
+		i++;
+			
+	}
 	return 0;
 }
