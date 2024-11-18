@@ -15,6 +15,11 @@ int transformation_table[8][16] = {
 	{1, 7, 14, 13, 0, 5, 8, 3, 4, 15, 10, 6, 9, 12, 11, 2} 
 };     //0  1   2   3  4  5  6  7  8  9  10  11  12  13 14 15
 
+struct Result{
+	uint32_t a_1;
+	uint32_t a_0;
+};
+
 vector<uint8_t> generateKey(){
 	vector<uint8_t> key(32);
 	random_device rd;
@@ -83,6 +88,53 @@ uint32_t g(uint32_t k, uint32_t a){
 	return(shifted);
 }
 
+// преобразование G[k](a_1, a_0)
+Result G(uint32_t k, uint32_t a_1, uint32_t a_0){
+	uint32_t temp = a_0;
+	a_0 = g(k, a_0) ^ a_1;
+	a_1 = temp;
+	return {a_1, a_0};
+}
+
+uint64_t GStar(uint32_t k, uint32_t a_1, uint32_t a_0){
+	uint32_t g_k_a0 = g(k, a_0);
+	uint32_t part1 = g_k_a0 ^ a_1;
+	uint32_t part2 = a_0;
+	return (static_cast<uint64_t>(part1) << 32) | part2;
+}
+
+uint64_t Encrypt(vector <uint8_t>& mainKey, uint64_t A){
+	vector<uint32_t> keys = expandKey(mainKey);
+	uint32_t a1 = static_cast<uint32_t>(A >> 32);
+	uint32_t a0 = static_cast<uint32_t>(A & 0xFFFFFFFF);
+	cout << hex << a1 << " " << a0 << endl;
+	Result res = {a1, a0};
+	cout << hex << a1 << " " << a0 << endl;
+	for(int i = 0; i < 31; i++){
+		res = G(keys[i], res.a_1, res.a_0);
+	}
+
+	cout << hex << res.a_1 << " " << res.a_0 << endl;
+	uint64_t GStarRes = GStar(keys[31], res.a_1, res.a_0);
+	return GStarRes;
+}
+
+uint64_t Decrypt(vector <uint8_t>& mainKey, uint64_t A){
+	vector<uint32_t> keys = expandKey(mainKey);
+	uint32_t a1 = static_cast<uint32_t>(A >> 32);
+	uint32_t a0 = static_cast<uint32_t>(A & 0xFFFFFFFF);
+//	cout << hex << a1 << " " << a0 << endl;
+	Result res = {a1, a0};
+//	cout << hex << a1 << " " << a0 << endl;
+	for(int i = 31; i > 0; i--){
+		res = G(keys[i], res.a_1, res.a_0);
+	}
+
+//	cout << hex << res.a_1 << " " << res.a_0 << endl;
+	uint64_t GStarRes = GStar(keys[0], res.a_1, res.a_0);
+	return GStarRes;
+}
+
 int main(){
 	vector<uint8_t> mainKey = {
 		0xff, 0xee, 0xdd, 0xcc, 0xbb, 0xaa, 0x99, 0x88,
@@ -121,6 +173,19 @@ int main(){
 		i++;
 			
 	}
+/*
+	uint32_t test_a1 = 0x80251e99;
+	uint32_t test_a0 = 0x2b96eca6;
 
+	Result result = G(keys[0], test_a1, test_a0);
+
+	cout << hex << GStar(keys[28], test_a1, test_a0) << endl;
+	cout << hex << result.a_1 << " " << result.a_0 << endl;
+*/
+	uint64_t A = 0xfedcba9876543210;
+	uint64_t cypher = Encrypt(mainKey, A);
+	cout << "Encrypted: " << hex << cypher << endl;
+	uint64_t original = Decrypt(mainKey, cypher);
+	cout << "Decrypted: " << hex << original << endl;
 	return 0;
 }
