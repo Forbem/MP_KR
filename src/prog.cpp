@@ -2,8 +2,9 @@
 #include <random>
 #include <vector>
 #include <iomanip>
+#include "transformation_table.h"
 using namespace std;
-
+/*
 int transformation_table[8][16] = { 
 	{12, 4, 6, 2, 10, 5, 11, 9, 14, 8, 13, 7, 0, 3, 15, 1},
 	{6, 8, 2, 3, 9, 10, 5, 12, 1, 14, 4, 7, 11, 13, 0, 15},
@@ -14,7 +15,7 @@ int transformation_table[8][16] = {
 	{8, 14, 2, 5, 6, 9, 1, 12, 15, 4, 11, 0, 13, 10, 3, 7},
 	{1, 7, 14, 13, 0, 5, 8, 3, 4, 15, 10, 6, 9, 12, 11, 2} 
 };     //0  1   2   3  4  5  6  7  8  9  10  11  12  13 14 15
-
+*/
 struct Result{
 	uint32_t a_1;
 	uint32_t a_0;
@@ -95,7 +96,7 @@ Result G(uint32_t k, uint32_t a_1, uint32_t a_0){
 	a_1 = temp;
 	return {a_1, a_0};
 }
-
+// преобразование G*[k](a_1, a_0)
 uint64_t GStar(uint32_t k, uint32_t a_1, uint32_t a_0){
 	uint32_t g_k_a0 = g(k, a_0);
 	uint32_t part1 = g_k_a0 ^ a_1;
@@ -103,6 +104,7 @@ uint64_t GStar(uint32_t k, uint32_t a_1, uint32_t a_0){
 	return (static_cast<uint64_t>(part1) << 32) | part2;
 }
 
+// Алгоритм зашифрования
 uint64_t Encrypt(vector <uint8_t>& mainKey, uint64_t A){
 	vector<uint32_t> keys = expandKey(mainKey);
 	uint32_t a1 = static_cast<uint32_t>(A >> 32);
@@ -119,6 +121,7 @@ uint64_t Encrypt(vector <uint8_t>& mainKey, uint64_t A){
 	return GStarRes;
 }
 
+// Алгоритм расшифрования
 uint64_t Decrypt(vector <uint8_t>& mainKey, uint64_t A){
 	vector<uint32_t> keys = expandKey(mainKey);
 	uint32_t a1 = static_cast<uint32_t>(A >> 32);
