@@ -2,6 +2,7 @@
 #include <random>
 #include <vector>
 #include <iomanip>
+#include <fstream>
 #include "transformation_table.h"
 
 using namespace std;
@@ -10,6 +11,40 @@ struct Result{
 	uint32_t a_1;
 	uint32_t a_0;
 };
+
+
+// @ функции для преобразований @
+// Преобразование uint64 в строку в шестнадцатеричном формате
+string uint64ToHex(uint64_t value){
+	stringstream ss;
+	ss << hex << setw(16) << setfill('0') << value;
+	return ss.str();
+}
+
+// Преобразование строки с шестнадцатеричными числами в uint64_t
+uint64_t hexToUint64(const string& hex) {
+	return stoull(hex, nullptr, 16);
+}
+
+// Преобразование ключа в строку в шестнадцатеричном формате
+string keyToHex(const vector<uint8_t>& key){
+	stringstream ss;
+	for(uint8_t byte : key){
+		ss << hex << setw(2) << setfill('0') << (int)byte;
+	}
+	return ss.str();
+}
+
+// Преобразование строки в ключ
+vector<uint8_t> hexToKey(const string& hex) {
+	vector<uint8_t> key;
+	for (size_t i = 0; i < hex.length(); i += 2) {
+		string byteString = hex.substr(i, 2);
+		uint8_t byte = static_cast<uint8_t>(stoi(byteString, nullptr, 16));
+		key.push_back(byte);
+	}
+	return key;
+}
 
 // генерация iv 
 uint64_t generateIV(){
@@ -211,35 +246,105 @@ vector<uint64_t> decryptCFB(const vector<uint8_t>& mainKey, const vector<uint64_
 }
 
 int main(){
-	vector<uint8_t> mainKey = generateKey();
-	cout << "Generated key: ";
-	printKey(mainKey);
-	uint64_t iv = generateIV();
-	cout << hex << "IV: " << generateIV() << endl;
-/*		
-	vector<uint32_t> keys = expandKey(mainKey);
-	uint64_t A = 0xfedcba9876543210;
-	uint64_t cypher = Encrypt(mainKey, A);
-	cout << "Encrypted: " << hex << cypher << endl;
-	uint64_t original = Decrypt(mainKey, cypher);
-	cout << "Decrypted: " << hex << original << endl;
-*/
-	string plaintext = "This is a secret message";
-	cout << "Plaintext: " << plaintext << endl;
+	int mode;
+	cout << "Выберите режим Шифрования - 1 или Дешифрования - 2 " << endl;	
+	cin >> mode;
 
-	vector<uint64_t> plaintextBlocks = stringToBlocks(plaintext);
-	//cout << hex << plaintextBlocks << endl;
-	
-	vector<uint64_t> ciphertextBlocks = encryptCFB(mainKey, plaintextBlocks, iv);
-	cout << "Ciphertext (hex blocks): ";
-	for(uint64_t block : ciphertextBlocks){
-		cout << hex << setw(16) << setfill('0') << block << " ";
+	if(mode == 1){
+		string plaintextFile;
+		cout << "Введите название файла: " << endl;
+		cin.ignore();
+		getline(cin, plaintextFile);
+
+		ifstream inputFile(plaintextFile);
+		if(!inputFile.is_open()){
+			cerr << "Ошибка открытия файла " << plaintextFile << endl;
+			return 1;	
+		}
+		stringstream buffer;
+		buffer << inputFile.rdbuf();
+		string plaintext = buffer.str();
+		inputFile.close();
+
+		uint64_t iv = generateIV();
+		vector<uint8_t> mainKey = generateKey();
+
+		vector<uint64_t> plaintextBlocks = stringToBlocks(plaintext);
+		vector<uint64_t> ciphertextBlocks = encryptCFB(mainKey, plaintextBlocks, iv);
+
+		ofstream encryptedFile("encrypted.txt");
+		if(!encryptedFile.is_open()){
+			cerr << "Не удалось открыть файл encrypted.txt " << endl;
+		      	return 1;
+		}
+		
+		for(uint64_t block : ciphertextBlocks){
+			encryptedFile << uint64ToHex(block) << " ";
+		}
+
+		encryptedFile.close();
+
+		ofstream keyFile("key_iv.txt");
+		if(!keyFile.is_open()){
+			cerr << "Невозможно открыть файл key_iv.txt " << endl;
+		}
+		
+		keyFile << "Key: " << keyToHex(mainKey) << endl;
+		keyFile << "IV: " << uint64ToHex(iv) << endl;
+		keyFile.close();
+
+		cout << "Текст зашифрован в файл encrypted.txt" << endl << "Ключи записаны в файл key_iv.txt" << endl;
+
+
+	}else if(mode == 2){
+		cout << "Чтение ключа " << endl;
+		ifstream keyFile("key_iv.txt");
+
+		if(!keyFile.is_open()){
+			cerr << "Невозможно открыть файл key_iv.txt";
+			return 1;
+		}	
+
+		string keyHex, ivHex, line;
+		getline(keyFile, line);
+		keyHex = line.substr(line.find(":") + 2);
+		getline(keyFile, line);
+		ivHex = line.substr(line.find(":") + 2);
+		keyFile.close();
+
+		vector<uint8_t> mainKey = hexToKey(keyHex);
+		uint64_t iv = hexToUint64(ivHex);
+
+		ifstream encryptedFile("encrypted.txt");
+		if (!encryptedFile.is_open()){
+			cerr << "Ошибка: не удалось открыть файл encrypted.txt." << endl;
+			return 1;
+		}
+
+		vector<uint64_t> ciphertextBlocks;
+		string block;
+		while (encryptedFile >> block){	
+			ciphertextBlocks.push_back(hexToUint64(block));
+    		}
+	      	encryptedFile.close();
+
+		vector<uint64_t> decryptedBlocks = decryptCFB(mainKey, ciphertextBlocks, iv);
+		string decryptedText = blocksToString(decryptedBlocks);
+		
+		ofstream decryptedFile("decrypted.txt");
+		if (!decryptedFile.is_open()) {
+			cerr << "Ошибка: не удалось создать файл decrypted.txt." << endl;
+		       	return 1;
+		}
+
+		decryptedFile << decryptedText;
+		decryptedFile.close();
+
+		cout << "Текст расшифрован и записан в decrypted.txt." << endl;
+	}else{
+		cout << "Ошибка: неизвестный режим." << endl;
 	}
-	cout << endl;
-
-	vector<uint64_t> decryptedBlocks = decryptCFB(mainKey, ciphertextBlocks, iv);
-	string decryptedText = blocksToString(decryptedBlocks);
-	cout << "Decrypted Text: " << decryptedText << endl;
+	
 
 	return 0;
 }
