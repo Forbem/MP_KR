@@ -56,51 +56,54 @@ uint64_t generateIV(){
 
 // Строка в вектор uint64_t
 vector<uint64_t> stringToBlocks(const string& input) {
-    	vector<uint64_t> blocks;
-	size_t length = input.size();
-	size_t fullBlocks = length / 8;
+    	vector<uint64_t> blocks;           // Вектор для хранения 64-битных блоков
+	size_t length = input.size();      // Длина строки
+	size_t fullBlocks = length / 8;    // Количество полных блоков (по 8 байтов)
 
-	// Process full blocks
+	// Проходим по всем полным блокам 
 	for (size_t i = 0; i < fullBlocks; ++i) {
-      		uint64_t block = 0;
+      		uint64_t block = 0;        // создаем 64-битный блок
         	for (size_t j = 0; j < 8; ++j) {
+			// Добавляем каждый символ строки в блок, сдвигая его в нужное положение
             		block |= static_cast<uint64_t>(static_cast<unsigned char>(input[i * 8 + j])) << (8 * (7 - j));
         	}
-        	blocks.push_back(block);
+        	blocks.push_back(block); // Добавляем блок в вектор
     	}
 
-    	// Process the final block with padding
+    	// Обработка последнего неполного блока
     	uint64_t lastBlock = 0;
-    	size_t remaining = length % 8;
+    	size_t remaining = length % 8;  // Количество оставшихся символов (меньше 8)
     	for (size_t i = 0; i < remaining; ++i) {
        	 	lastBlock |= static_cast<uint64_t>(static_cast<unsigned char>(input[fullBlocks * 8 + i])) << (8 * (7 - i));
     	}
+	// Добавление padding (заполнение оставшихся байтов значением количества недостающих байтов)
     	uint8_t paddingValue = static_cast<uint8_t>(8 - remaining);
     	for (size_t i = remaining; i < 8; ++i) {
         	lastBlock |= static_cast<uint64_t>(paddingValue) << (8 * (7 - i));
     	}
-    	blocks.push_back(lastBlock);
 
-    	return blocks;
+    	blocks.push_back(lastBlock);	// Добавляем последний блок в вектор
+    	return blocks;                  // Возвращаем вектор блоков
 }
 
 // вектор в строку
 string blocksToString(const vector<uint64_t>& blocks) {
-    	string output;
+    	string output;        // Строка для результата
     	for (size_t i = 0; i < blocks.size(); ++i) {
         	for (int j = 7; j >= 0; --j) {
+		// Извлекаем каждый байт из 64-битного блока и добавляем его в строку
             	char byte = static_cast<char>((blocks[i] >> (8 * j)) & 0xFF);
             	output += byte;
         	}
     	}
 
-    	// Remove padding
-    	uint8_t paddingValue = static_cast<uint8_t>(output.back());
+    	// Удаляем padding
+    	uint8_t paddingValue = static_cast<uint8_t>(output.back()); // Последний символ содержит значение padding
     	if (paddingValue > 0 && paddingValue <= 8) {
-        	output = output.substr(0, output.size() - paddingValue);
+        	output = output.substr(0, output.size() - paddingValue); // Удаляем последние paddingValue символов
     	}
 
-    	return output;
+    	return output;      // Возвращаем строку
 }
 
 // генерация ключа для магмы
@@ -122,6 +125,13 @@ void printKey(vector<uint8_t>& key){
 		cout << hex << setw(2) << setfill('0') << (int)byte;
 	}
 	cout << dec << endl;
+}
+
+// Вывод блоков
+void printBlocks(const vector<uint64_t>& blocks){
+	for(size_t i = 0; i < blocks.size(); i++){
+		cout << "Block " << i + 1 << ": 0x" << hex << setw(16) << setfill('0') << blocks[i] << endl;
+	}
 }
 
 // алгоритм развертывания ключа
@@ -271,6 +281,8 @@ int main(){
 
 		vector<uint64_t> plaintextBlocks = stringToBlocks(plaintext);
 		vector<uint64_t> ciphertextBlocks = encryptCFB(mainKey, plaintextBlocks, iv);
+
+		printBlocks(plaintextBlocks);
 
 		ofstream encryptedFile("encrypted.txt");
 		if(!encryptedFile.is_open()){
