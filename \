@@ -20,52 +20,30 @@ uint64_t generateIV(){
 }
 
 // Строка в вектор uint64_t
-vector<uint64_t> stringToBlocks(const string& input) {
-    	vector<uint64_t> blocks;
-	size_t length = input.size();
-	size_t fullBlocks = length / 8;
-
-	// Process full blocks
-	for (size_t i = 0; i < fullBlocks; ++i) {
-      		uint64_t block = 0;
-        	for (size_t j = 0; j < 8; ++j) {
-            		block |= static_cast<uint64_t>(static_cast<unsigned char>(input[i * 8 + j])) << (8 * (7 - j));
-        	}
-        	blocks.push_back(block);
-    	}
-
-    	// Process the final block with padding
-    	uint64_t lastBlock = 0;
-    	size_t remaining = length % 8;
-    	for (size_t i = 0; i < remaining; ++i) {
-       	 	lastBlock |= static_cast<uint64_t>(static_cast<unsigned char>(input[fullBlocks * 8 + i])) << (8 * (7 - i));
-    	}
-    	uint8_t paddingValue = static_cast<uint8_t>(8 - remaining);
-    	for (size_t i = remaining; i < 8; ++i) {
-        	lastBlock |= static_cast<uint64_t>(paddingValue) << (8 * (7 - i));
-    	}
-    	blocks.push_back(lastBlock);
-
-    	return blocks;
+vector<uint64_t> stringToBlocks(const string& input){
+	vector<uint64_t> blocks;
+	for(size_t i = 0; i < input.size(); i += 8){
+		uint64_t block = 0;
+		for(size_t j = 0; j < 8 && i + j < input.size(); ++j){
+			block |= static_cast<uint64_t>(static_cast<unsigned char>(input[i + j])) << (*(7 - j));
+		}
+		blocks.push_back(block);
+	}
+	return blocks;
 }
 
 // вектор в строку
-string blocksToString(const vector<uint64_t>& blocks) {
-    	string output;
-    	for (size_t i = 0; i < blocks.size(); ++i) {
-        	for (int j = 7; j >= 0; --j) {
-            	char byte = static_cast<char>((blocks[i] >> (8 * j)) & 0xFF);
-            	output += byte;
-        	}
-    	}
-
-    	// Remove padding
-    	uint8_t paddingValue = static_cast<uint8_t>(output.back());
-    	if (paddingValue > 0 && paddingValue <= 8) {
-        	output = output.substr(0, output.size() - paddingValue);
-    	}
-
-    	return output;
+string blocksToString(const vector<uint64_t>& blocks){
+	string output;
+	for(uint64_t block : blocks){
+		for(int i = 7; i >= 0; --i){
+			char byte = static_cast<char>((block >> (8 * i)) & 0xFF);
+			if(byte != '\0'){
+				output += byte
+			}
+		}
+	}
+	return output;
 }
 
 // генерация ключа для магмы
@@ -90,7 +68,7 @@ void printKey(vector<uint8_t>& key){
 }
 
 // алгоритм развертывания ключа
-vector<uint32_t> expandKey(const vector<uint8_t>& mainKey){
+vector<uint32_t> expandKey(vector<uint8_t>& mainKey){
 	vector<uint32_t> keys(32);
 
 	for(int i = 0; i < 8; i++){
@@ -153,21 +131,24 @@ uint64_t GStar(uint32_t k, uint32_t a_1, uint32_t a_0){
 }
 
 // Алгоритм зашифрования
-uint64_t Encrypt(const vector <uint8_t>& mainKey, uint64_t A){
+uint64_t Encrypt(vector <uint8_t>& mainKey, uint64_t A){
 	vector<uint32_t> keys = expandKey(mainKey);
 	uint32_t a1 = static_cast<uint32_t>(A >> 32);
 	uint32_t a0 = static_cast<uint32_t>(A & 0xFFFFFFFF);
+	cout << hex << a1 << " " << a0 << endl;
 	Result res = {a1, a0};
+	cout << hex << a1 << " " << a0 << endl;
 	for(int i = 0; i < 31; i++){
 		res = G(keys[i], res.a_1, res.a_0);
 	}
 
+	cout << hex << res.a_1 << " " << res.a_0 << endl;
 	uint64_t GStarRes = GStar(keys[31], res.a_1, res.a_0);
 	return GStarRes;
 }
 
 // Алгоритм расшифрования
-uint64_t Decrypt(const vector <uint8_t>& mainKey, uint64_t A){
+uint64_t Decrypt(vector <uint8_t>& mainKey, uint64_t A){
 	vector<uint32_t> keys = expandKey(mainKey);
 	uint32_t a1 = static_cast<uint32_t>(A >> 32);
 	uint32_t a0 = static_cast<uint32_t>(A & 0xFFFFFFFF);
@@ -181,14 +162,14 @@ uint64_t Decrypt(const vector <uint8_t>& mainKey, uint64_t A){
 }
 
 // Шифрование CFB
-vector<uint64_t> encryptCFB(const vector<uint8_t>& mainKey, const vector<uint64_t>& plaintextBlocks, uint64_t iv){
-	vector<uint64_t> ciphertextBlocks;
+vector<uint64_t> encryptCFB(const vector<uint8_t>& mainKey, const vector<uin64_t>& plaintextBlocks, uint64_t iv){
+	vector<uint64_t> plaintextBlocks;
 	uint64_t feedback = iv;
 
 	for(uint64_t block : plaintextBlocks){
-		uint64_t encryptedFeedback = Encrypt(mainKey, feedback);
+		uint64_t encryptedFeedback = Encrypt(mainKey, feeedback);
 		uint64_t cipherBlock = block ^ encryptedFeedback;
-		ciphertextBlocks.push_back(cipherBlock);
+		cipertextBlocks.push_back(cipherBlock);
 		feedback = cipherBlock;
 	}
 
@@ -201,7 +182,7 @@ vector<uint64_t> decryptCFB(const vector<uint8_t>& mainKey, const vector<uint64_
 	uint64_t feedback = iv;
 
 	for(uint64_t cipherBlock : ciphertextBlocks){
-		uint64_t encryptedFeedback = Encrypt(mainKey, feedback);
+		uint64_t encryptedFeedback = Decrypt(mainKey, feedback);
 		uint64_t plainBlock = cipherBlock ^ encryptedFeedback;
 		plaintextBlocks.push_back(plainBlock);
 		feedback = cipherBlock;
@@ -216,20 +197,19 @@ int main(){
 	printKey(mainKey);
 	uint64_t iv = generateIV();
 	cout << hex << "IV: " << generateIV() << endl;
-/*		
+		
 	vector<uint32_t> keys = expandKey(mainKey);
 	uint64_t A = 0xfedcba9876543210;
 	uint64_t cypher = Encrypt(mainKey, A);
 	cout << "Encrypted: " << hex << cypher << endl;
 	uint64_t original = Decrypt(mainKey, cypher);
 	cout << "Decrypted: " << hex << original << endl;
-*/
+
 	string plaintext = "This is a secret message";
 	cout << "Plaintext: " << plaintext << endl;
 
 	vector<uint64_t> plaintextBlocks = stringToBlocks(plaintext);
-	//cout << hex << plaintextBlocks << endl;
-	
+
 	vector<uint64_t> ciphertextBlocks = encryptCFB(mainKey, plaintextBlocks, iv);
 	cout << "Ciphertext (hex blocks): ";
 	for(uint64_t block : ciphertextBlocks){
@@ -237,7 +217,7 @@ int main(){
 	}
 	cout << endl;
 
-	vector<uint64_t> decryptedBlocks = decryptCFB(mainKey, ciphertextBlocks, iv);
+	vector<uint64_t> decryptedBlocks = decryptCFB(mainKey, cipherTextBlocks, iv);
 	string decryptedText = blocksToString(decryptedBlocks);
 	cout << "Decrypted Text: " << decryptedText << endl;
 
