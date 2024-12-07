@@ -291,7 +291,7 @@ int main(){
 		}
 		
 		for(uint64_t block : ciphertextBlocks){
-			encryptedFile << uint64ToHex(block) << " ";
+			encryptedFile << uint64ToHex(block);
 		}
 
 		encryptedFile.close();
@@ -334,11 +334,14 @@ int main(){
 		}
 
 		vector<uint64_t> ciphertextBlocks;
-		string block;
-		while (encryptedFile >> block){	
-			ciphertextBlocks.push_back(hexToUint64(block));
-    		}
+		string encryptedData;
+		encryptedFile >> encryptedData;
 	      	encryptedFile.close();
+
+		for(size_t i = 0; i < encryptedData.length(); i += 16){
+			string block = encryptedData.substr(i, 16);
+			ciphertextBlocks.push_back(hexToUint64(block));
+		}
 
 		vector<uint64_t> decryptedBlocks = decryptCFB(mainKey, ciphertextBlocks, iv);
 		string decryptedText = blocksToString(decryptedBlocks);
