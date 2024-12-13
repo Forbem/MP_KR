@@ -4,6 +4,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <windows.h>
 
 using namespace std;
 
@@ -23,7 +24,7 @@ int main(){
 			cerr << "Ошибка открытия файла " << plaintextFile << endl;
 			return 1;	
 		}
-		stringstream buffer;
+	 	stringstream buffer;
 		buffer << inputFile.rdbuf();
 		string plaintext = buffer.str();
 		inputFile.close();
